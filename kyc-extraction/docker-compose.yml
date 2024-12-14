@@ -1,0 +1,45 @@
+services:
+  api:
+    build:
+      context: .
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--reload" ]
+    volumes:
+      - .:/app
+    ports:
+      - "5001:5000"
+    environment:
+      - ENV=dev
+      - RABBIT_MQ_URL=amqp://rabbitmq_server:5672
+    depends_on:
+      - mongo
+      - rabbitmq_server
+
+  rabbitmq_server:
+    image: rabbitmq:3.12-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  worker:
+    build:
+      context: .
+      dockerfile: celery-worker/Dockerfile
+    volumes:
+      - .:/app
+    environment:
+      - RABBIT_MQ_URL=amqp://rabbitmq_server:5672
+      - DB_NAME=KYCExtractorDB
+      - DB_URL=mongodb+srv://admin:kLCFvsuUbSfx4o2U@orchestrator-dev.nqnqzyi.mongodb.net
+      - ENV=dev
+    depends_on:
+      - rabbitmq_server
+
+  mongo:
+    image: "mongo:latest"
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
